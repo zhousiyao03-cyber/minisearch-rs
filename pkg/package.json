@@ -1,6 +1,9 @@
 {
   "name": "minisearch-rs",
   "type": "module",
+  "collaborators": [
+    "zhousiyao03 <zhousiyao03@gmail.com>"
+  ],
   "description": "A tiny BM25 full-text search engine for Rust and the browser.",
   "version": "0.1.0",
   "license": "MIT",
@@ -14,6 +17,7 @@
     "minisearch_rs.d.ts"
   ],
   "main": "minisearch_rs.js",
+  "homepage": "https://github.com/zhousiyao03-cyber/minisearch-rs",
   "types": "minisearch_rs.d.ts",
   "sideEffects": [
     "./snippets/*"

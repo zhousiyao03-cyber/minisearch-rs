@@ -3,12 +3,25 @@ name = "minisearch-rs"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
+authors = ["zhousiyao03 <zhousiyao03@gmail.com>"]
 description = "A tiny BM25 full-text search engine for Rust and the browser."
 license = "MIT"
 repository = "https://github.com/zhousiyao03-cyber/minisearch-rs"
+homepage = "https://github.com/zhousiyao03-cyber/minisearch-rs"
+documentation = "https://docs.rs/minisearch-rs"
 readme = "README.md"
 keywords = ["search", "bm25", "full-text-search", "wasm"]
 categories = ["text-processing", "wasm"]
+include = [
+    "src/**/*",
+    "examples/**/*",
+    "Cargo.toml",
+    "Cargo.lock",
+    "rust-toolchain.toml",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -49,7 +62,20 @@ codegen-units = 1
 opt-level = "z"
 strip = true
 
-# wasm-pack metadata: skip the optional `wasm-opt` post-processing pass.
-# Re-enable once binaryen is installed locally (e.g. `brew install binaryen`).
+# wasm-pack metadata: enable `wasm-opt` (binaryen) for release builds.
+# Requires `binaryen` to be installed locally (`brew install binaryen` on
+# macOS). The `-Oz` pass optimizes for size, which roughly halves the
+# bundle compared to the unoptimized output.
 [package.metadata.wasm-pack.profile.release]
-wasm-opt = false
+# rustc 1.85+ targets a Wasm baseline that uses bulk-memory ops and
+# multi-value, so we have to tell wasm-opt to enable those features
+# during validation. Otherwise it rejects perfectly valid input.
+wasm-opt = [
+    "-Oz",
+    "--enable-bulk-memory",
+    "--enable-mutable-globals",
+    "--enable-nontrapping-float-to-int",
+    "--enable-sign-ext",
+    "--enable-multivalue",
+    "--enable-reference-types",
+]

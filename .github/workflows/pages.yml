@@ -1,0 +1,75 @@
+name: Deploy demo to GitHub Pages
+
+# Builds the wasm bundle from source on every push to main and ships
+# it together with /demo to GitHub Pages, so the live demo is always
+# in sync with the latest commit.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Avoid stacked runs — only the most recent push gets deployed.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo + target
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install wasm-pack
+        uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: latest
+
+      - name: Install binaryen (wasm-opt)
+        run: sudo apt-get install -y binaryen
+
+      - name: Build wasm package
+        run: wasm-pack build --target web --out-dir pkg --release
+
+      - name: Stage site
+        # The demo expects `pkg/` and `demo/` to be siblings under one root.
+        # We copy them next to each other and set demo/index.html as the
+        # site root by symlinking.
+        run: |
+          mkdir -p _site
+          cp -r demo _site/demo
+          cp -r pkg  _site/pkg
+          cp demo/index.html _site/index.html
+          # Rewrite asset URLs so the demo still finds /pkg and /demo
+          # even though it's no longer under /demo/.
+          sed -i 's|"../pkg/|"./pkg/|g' _site/index.html
+          sed -i 's|"./sample-docs.js"|"./demo/sample-docs.js"|g' _site/index.html
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -2,7 +2,9 @@
 
 A tiny, embeddable BM25 full-text search engine for Rust and the browser.
 
-- **Compact** — ~1k LOC of pure Rust, no `unsafe`, ~187 KB wasm bundle (pre-`wasm-opt`).
+**Live demo:** [zhousiyao03-cyber.github.io/minisearch-rs](https://zhousiyao03-cyber.github.io/minisearch-rs/)
+
+- **Compact** — ~1k LOC of pure Rust, no `unsafe`, ~170 KB wasm bundle (`wasm-opt -Oz`, ~74 KB gzipped).
 - **Self-contained** — single index file (`bincode 2`), no server, no daemon, no schema files.
 - **Drop-in for small corpora** — built for "thousands of documents, low MB" workloads where shipping `tantivy` or running Meilisearch is overkill.
 - **Same API on native and wasm** — score notes, docs, or messages from a CLI today and from a browser tomorrow.
