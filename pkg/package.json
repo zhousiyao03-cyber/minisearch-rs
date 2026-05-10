@@ -1,0 +1,27 @@
+{
+  "name": "minisearch-rs",
+  "type": "module",
+  "description": "A tiny BM25 full-text search engine for Rust and the browser.",
+  "version": "0.1.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zhousiyao03-cyber/minisearch-rs"
+  },
+  "files": [
+    "minisearch_rs_bg.wasm",
+    "minisearch_rs.js",
+    "minisearch_rs.d.ts"
+  ],
+  "main": "minisearch_rs.js",
+  "types": "minisearch_rs.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ],
+  "keywords": [
+    "search",
+    "bm25",
+    "full-text-search",
+    "wasm"
+  ]
+}

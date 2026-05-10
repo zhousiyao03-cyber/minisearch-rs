@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>minisearch-rs · in-browser BM25 demo</title>
+  <style>
+    :root {
+      --bg: #0e0f12;
+      --panel: #16181d;
+      --panel-2: #1c1f26;
+      --text: #e6e8eb;
+      --muted: #8a90a0;
+      --accent: #ff7a59;
+      --accent-soft: #ff7a5933;
+      --border: #2a2e36;
+      --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+      min-height: 100vh;
+    }
+    header {
+      padding: 28px 32px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    h1 { margin: 0 0 4px; font-size: 22px; font-weight: 600; }
+    .subtitle { color: var(--muted); font-size: 13px; }
+    .stats {
+      display: flex; gap: 18px; margin-top: 14px;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+    .stat { background: var(--panel); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); }
+    .stat strong { color: var(--text); font-weight: 600; }
+    main {
+      display: grid; grid-template-columns: 360px 1fr;
+      gap: 0; height: calc(100vh - 116px);
+    }
+    aside {
+      border-right: 1px solid var(--border);
+      padding: 20px; overflow-y: auto;
+      background: var(--panel);
+    }
+    aside h2 {
+      margin: 0 0 12px; font-size: 12px; letter-spacing: .08em;
+      color: var(--muted); text-transform: uppercase; font-weight: 500;
+    }
+    .doc-list { list-style: none; padding: 0; margin: 0; }
+    .doc-list li {
+      padding: 8px 10px; margin-bottom: 4px; border-radius: 6px;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+      cursor: default;
+    }
+    .doc-list li:hover { background: var(--panel-2); color: var(--text); }
+    textarea {
+      width: 100%; height: 90px; resize: vertical;
+      background: var(--panel-2); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 10px; font: 12px/1.5 var(--mono);
+      margin-top: 8px;
+    }
+    .row { display: flex; gap: 8px; margin-top: 8px; }
+    input[type="text"] {
+      flex: 1; background: var(--panel-2); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 10px; font: 12px var(--mono);
+    }
+    button {
+      background: var(--accent); color: white; border: none; border-radius: 8px;
+      padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer;
+    }
+    button:hover { filter: brightness(1.1); }
+    button.secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
+
+    section.results { padding: 20px 32px; overflow-y: auto; }
+    .search-bar {
+      display: flex; gap: 8px; margin-bottom: 18px;
+      position: sticky; top: 0; padding: 12px 0; background: var(--bg); z-index: 1;
+    }
+    .search-bar input {
+      flex: 1; font-size: 16px; padding: 12px 14px; font-family: inherit;
+    }
+    .hit {
+      padding: 14px 16px; border: 1px solid var(--border); border-radius: 10px;
+      margin-bottom: 10px; background: var(--panel);
+    }
+    .hit-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .hit-id { font-family: var(--mono); font-size: 13px; color: var(--text); }
+    .hit-score {
+      font-family: var(--mono); font-size: 11px; color: var(--muted);
+      background: var(--panel-2); padding: 2px 8px; border-radius: 4px;
+    }
+    .hit-snippet { color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .hit-snippet mark {
+      background: var(--accent-soft); color: var(--accent);
+      padding: 1px 4px; border-radius: 3px; font-weight: 600;
+    }
+    .empty { color: var(--muted); padding: 30px; text-align: center; }
+    .timing { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>minisearch-rs <span style="color: var(--muted); font-weight: 400;">/ browser demo</span></h1>
+    <div class="subtitle">A BM25 full-text search engine, compiled from Rust to WebAssembly. All search runs locally.</div>
+    <div class="stats">
+      <div class="stat">docs <strong id="stat-docs">0</strong></div>
+      <div class="stat">unique terms <strong id="stat-terms">0</strong></div>
+      <div class="stat">index size <strong id="stat-size">0 B</strong></div>
+      <div class="stat">wasm <strong id="stat-wasm">…</strong></div>
+    </div>
+  </header>
+
+  <main>
+    <aside>
+      <h2>Indexed documents</h2>
+      <ul class="doc-list" id="doc-list"></ul>
+
+      <h2 style="margin-top: 24px;">Add a document</h2>
+      <input id="new-id" type="text" placeholder="my-note.md" />
+      <textarea id="new-text" placeholder="Paste any text here…"></textarea>
+      <div class="row">
+        <button id="add-btn">Add to index</button>
+        <button id="reset-btn" class="secondary">Reset</button>
+      </div>
+    </aside>
+
+    <section class="results">
+      <div class="search-bar">
+        <input id="query" type="text" placeholder="Search across all documents…  (try: rust browser, search engine, BM25)" autofocus />
+      </div>
+      <div id="results"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import init, { JsEngine } from "../pkg/minisearch_rs.js";
+    import { SAMPLE_DOCS } from "./sample-docs.js";
+
+    const $ = (id) => document.getElementById(id);
+
+    let engine = null;
+    /** @type {Map<string, string>} doc id -> original text */
+    let corpus = new Map();
+
+    function fmtBytes(n) {
+      if (n < 1024) return `${n} B`;
+      if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+      return `${(n / 1024 / 1024).toFixed(2)} MB`;
+    }
+
+    function refreshStats() {
+      $("stat-docs").textContent = engine.docCount();
+      $("stat-terms").textContent = engine.termCount();
+      const bytes = engine.toBytes();
+      $("stat-size").textContent = fmtBytes(bytes.length);
+    }
+
+    function refreshDocList() {
+      const list = $("doc-list");
+      list.innerHTML = "";
+      for (const id of corpus.keys()) {
+        const li = document.createElement("li");
+        li.textContent = id;
+        list.appendChild(li);
+      }
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
+      );
+    }
+
+    /** Render a snippet's text with <mark> wrappers around its highlight ranges. */
+    function renderSnippet(snippet) {
+      if (!snippet) return "";
+      // The byte offsets from Rust are over UTF-8 bytes. For ASCII demo
+      // text these match JS string indices; for true Unicode we would
+      // need to build a byte→char map. The corpus here is ASCII-only.
+      const { text, highlights } = snippet;
+      let out = "";
+      let cursor = 0;
+      const sorted = [...highlights].sort((a, b) => a[0] - b[0]);
+      for (const [s, e] of sorted) {
+        out += escapeHtml(text.slice(cursor, s));
+        out += `<mark>${escapeHtml(text.slice(s, e))}</mark>`;
+        cursor = e;
+      }
+      out += escapeHtml(text.slice(cursor));
+      return out;
+    }
+
+    function runSearch() {
+      const q = $("query").value.trim();
+      const results = $("results");
+      results.innerHTML = "";
+      if (!q || engine.docCount() === 0) {
+        results.innerHTML = '<div class="empty">Type a query above.</div>';
+        return;
+      }
+      const t0 = performance.now();
+      const corpusObj = Object.fromEntries(corpus);
+      const hits = engine.search(q, 10, corpusObj);
+      const dt = performance.now() - t0;
+
+      if (hits.length === 0) {
+        results.innerHTML = `<div class="empty">No hits for "<strong>${escapeHtml(q)}</strong>".</div>`;
+        return;
+      }
+      for (const hit of hits) {
+        const div = document.createElement("div");
+        div.className = "hit";
+        div.innerHTML = `
+          <div class="hit-head">
+            <span class="hit-id">${escapeHtml(hit.doc_id)}</span>
+            <span class="hit-score">score ${hit.score.toFixed(3)}</span>
+          </div>
+          <div class="hit-snippet">${renderSnippet(hit.snippet)}</div>
+        `;
+        results.appendChild(div);
+      }
+      const timing = document.createElement("div");
+      timing.className = "timing";
+      timing.textContent = `${hits.length} hit(s) in ${dt.toFixed(2)}ms (BM25 over ${engine.docCount()} docs / ${engine.termCount()} terms)`;
+      results.appendChild(timing);
+    }
+
+    function rebuildEngine(docs) {
+      engine = new JsEngine();
+      corpus = new Map();
+      for (const { id, text } of docs) {
+        engine.addDocument(id, text);
+        corpus.set(id, text);
+      }
+      refreshStats();
+      refreshDocList();
+      runSearch();
+    }
+
+    $("add-btn").addEventListener("click", () => {
+      const id = $("new-id").value.trim();
+      const text = $("new-text").value.trim();
+      if (!id || !text) return;
+      try {
+        engine.addDocument(id, text);
+        corpus.set(id, text);
+        $("new-id").value = "";
+        $("new-text").value = "";
+        refreshStats();
+        refreshDocList();
+        runSearch();
+      } catch (e) {
+        alert(`Could not add: ${e}`);
+      }
+    });
+
+    $("reset-btn").addEventListener("click", () => {
+      rebuildEngine(SAMPLE_DOCS);
+    });
+
+    $("query").addEventListener("input", runSearch);
+
+    (async () => {
+      const t0 = performance.now();
+      await init();
+      const dt = performance.now() - t0;
+      $("stat-wasm").textContent = `loaded in ${dt.toFixed(0)}ms`;
+      rebuildEngine(SAMPLE_DOCS);
+    })();
+  </script>
+</body>
+</html>

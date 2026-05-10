@@ -1,5 +1,9 @@
 /target
-/pkg
 Cargo.lock.bak
 *.bin
 .DS_Store
+
+# wasm-pack build artifact directory.
+# Tracked at the repo root so users can run the demo without installing
+# wasm-pack themselves; rebuild with `wasm-pack build --target web`.
+# pkg/ is intentionally NOT ignored.

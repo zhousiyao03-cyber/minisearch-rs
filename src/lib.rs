@@ -1,8 +1,11 @@
 //! # minisearch-rs
 //!
-//! A tiny BM25 full-text search engine, built from scratch in Rust as a
-//! learning project. Phase 1 is a pure-Rust library and CLI; Phase 2 will
-//! ship the same library to the browser via `wasm-bindgen`.
+//! A tiny, embeddable BM25 full-text search engine. Designed for "thousands
+//! of documents, low MB" workloads — note-taking apps, doc search, in-page
+//! filters — where shipping `tantivy` or running Meilisearch is overkill.
+//!
+//! The same API runs natively (CLI, server) and in the browser via
+//! `wasm-bindgen`.
 //!
 //! ## Modules
 //!
@@ -31,6 +34,9 @@ pub mod index;
 pub mod search;
 pub mod snippet;
 pub mod tokenizer;
+
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;
 
 pub use error::{Error, Result};
 pub use index::Index;

@@ -3,18 +3,27 @@ name = "minisearch-rs"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
-description = "A tiny BM25 full-text search engine, built from scratch in Rust to learn the language and target wasm."
+description = "A tiny BM25 full-text search engine for Rust and the browser."
 license = "MIT"
-repository = "https://github.com/zhousiyao03/minisearch-rs"
+repository = "https://github.com/zhousiyao03-cyber/minisearch-rs"
 readme = "README.md"
 keywords = ["search", "bm25", "full-text-search", "wasm"]
 categories = ["text-processing", "wasm"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 unicode-segmentation = "1.12"
 serde = { version = "1", features = ["derive"] }
 bincode = { version = "2", features = ["serde"] }
 thiserror = "2"
+
+# Only pulled in when compiling for wasm.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+serde-wasm-bindgen = "0.6"
+console_error_panic_hook = "0.1"
 
 [dev-dependencies]
 anyhow = "1"
@@ -39,3 +48,8 @@ lto = true
 codegen-units = 1
 opt-level = "z"
 strip = true
+
+# wasm-pack metadata: skip the optional `wasm-opt` post-processing pass.
+# Re-enable once binaryen is installed locally (e.g. `brew install binaryen`).
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false

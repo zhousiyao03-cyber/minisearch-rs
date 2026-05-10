@@ -2,12 +2,10 @@
 
 A tiny, embeddable BM25 full-text search engine for Rust and the browser.
 
-- **Compact** — ~1k LOC of pure Rust, no `unsafe`, ~187 KB wasm bundle (pre-`wasm-opt`).
+- **Compact** — ~1k LOC of pure Rust, no `unsafe`, designed to compile to a small wasm bundle.
 - **Self-contained** — single index file (`bincode 2`), no server, no daemon, no schema files.
 - **Drop-in for small corpora** — built for "thousands of documents, low MB" workloads where shipping `tantivy` or running Meilisearch is overkill.
 - **Same API on native and wasm** — score notes, docs, or messages from a CLI today and from a browser tomorrow.
-
-![demo screenshot](demo/screenshots/demo.png)
 
 ## What it does
 
@@ -42,23 +40,10 @@ cargo run --example cli --release -- info
 
 The CLI walks a directory for `*.md` files, builds an index at `./minisearch.bin`, and prints ranked hits with snippets.
 
-## Browser demo
-
-```bash
-wasm-pack build --target web --out-dir pkg --release
-python3 -m http.server 8765 --bind 127.0.0.1
-# open http://127.0.0.1:8765/demo/index.html
-```
-
-The demo ships a curated 8-document Wikipedia-style corpus, lets you add
-your own documents, and runs every query end-to-end in the browser via
-the `JsEngine` wasm binding. Search latency on the demo corpus is
-~0.1 ms.
-
 ## Roadmap
 
 - [x] **Phase 1** — Native library + CLI (BM25, snippets, on-disk index)
-- [x] **Phase 2** — `wasm-bindgen` build + browser demo
+- [ ] **Phase 2** — `wasm-bindgen` build + browser demo
 - [ ] **Phase 3** — Optional [knosi](https://www.knosi.xyz) integration
 
 ## Configuration
